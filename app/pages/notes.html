@@ -1,14 +1,217 @@
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Project notes | CampusSwap</title><link rel="stylesheet" href="/static/css/styles.css?v=sticky-header-1"></head>
-<body><header class="site-header"><a class="brand" href="/" aria-label="CampusSwap home"><span class="brand-mark" aria-hidden="true">↔</span> CampusSwap</a><nav aria-label="Main navigation"><a href="/">Browse</a><a href="/ask">Ask AI ✦</a><a class="active" href="/notes" aria-current="page">Project notes</a></nav></header><main class="notes"><p class="eyebrow">BUILDING CAMPUSSWAP</p><h1>My project notes</h1><p class="intro">What I have built so far, what is real, and what is still missing.</p>
-<section><h2>What I have built and who it is for</h2><p>I am building CampusSwap for students who want to find affordable second-hand items for campus life. This is my initial marketplace MVP for the CognitioLabs Associate Forward Deployed Engineer assessment.</p><p>I have built a responsive catalogue, individual listing pages, category filtering, and one unified search box. I can enter an item name or describe what I need without choosing a technical search mode. Non-empty searches use the same semantic retrieval and return at most five listings at a tested 0.30 starting similarity threshold; an empty search shows the normal catalogue. Browse listing links preserve the current query and category, so a detail page can return me to the same results. I also built a separate Ask CampusSwap page where reviewers can ask factual questions and comparisons about the seeded catalogue. It uses a compact, responsive chat card with message bubbles, example questions, an in-card composer, and clickable cards for relevant catalogue items. When I follow one of those cards, Back to Ask CampusSwap restores the visible session conversation.</p></section>
-<section><h2>What is demo data</h2><p>All 36 listings are seeded, fictional examples across study, electronics, furniture, sports, lifestyle, room essentials, books, and clothing. Names, conditions, prices, sellers, and Singapore pickup locations are examples, not verified offers from real students. The item pictures are emoji placeholders, not product photos. No sale, reservation, or conversation happens in this demo.</p></section>
-<section><h2>Tools and AI status</h2><p>I used Codex to help inspect the repository, plan the architecture, write the application and documentation, and check the implementation.</p><p>The unified browse search and Ask CampusSwap both use <code>openai/text-embedding-3-small</code> through the CognitioLabs gateway to retrieve and relevance-order catalogue records. Ask CampusSwap then uses <code>gpt-5.6-terra</code> through the CognitioLabs OpenAI-compatible gateway to write its answer. The application reads the gateway key only from the server-side <code>CLASSGW_KEY</code> environment variable. The literal case-insensitive keyword API still exists, but people browsing the site no longer need to choose it.</p></section>
-<section><h2>Grounding and technical decisions</h2><p>Ask CampusSwap is separate from both marketplace search modes. It sends the question and compact explicit SQLite fields for all 36 seeded listings to the answer model, after ordering them with the existing cached embedding retrieval. I intentionally use the full small catalogue rather than semantic Top-K context because questions about price or pickup location could otherwise miss the relevant listing.</p><p>The answer model returns concise text and candidate listing IDs. I treat those IDs as untrusted: the server checks each one is in the grounded context, reloads it from SQLite, and only then sends the real record to the browser as a clickable card. Cards show at most eight by default, or all validated matches when the question explicitly asks for all. Browse detail links reconstruct only local results URLs from whitelisted query and category fields. Ask uses sessionStorage only for visible questions, answers, validated cards, and the more-results state; it does not store the key, prompts, embedding vectors, scores, gateway details, internal errors, or backend chat history. I instruct the answer model to treat supplied catalogue records as its only source, compare only explicit values, and say when the seeded catalogue does not provide a requested fact such as warranty, delivery, or stock availability. This is a grounding design, not a guarantee against every possible adversarial prompt.</p></section>
-<section><h2>What I intentionally left out</h2><p>I have not built accounts, authentication, payments, messaging, listing management, persistent chat history, streaming responses, or multi-turn server-side conversations. I also did not add a vector database, Vite, npm, a build step, or additional frontend libraries.</p></section>
-<section><h2>What I have checked</h2><p>The automated Python tests use a temporary SQLite database and mock every embedding and chat-completion call, so they make zero real external gateway calls. They cover seed reconciliation, filters, validation, semantic caching and thresholds, Q&amp;A context construction, comparison and missing-fact responses, and safe failures. I have not completed live browser or assistive-technology testing.</p></section>
-<section><h2>Known issues and current limitations</h2><p>This is a local demo, not a deployed marketplace. There is no identity or campus verification, moderation, image upload, stock tracking, or real seller contact. SQLite needs a writable local disk; I have not designed this for multiple application servers.</p><p>Non-empty unified search and Ask CampusSwap need a valid server-side <code>CLASSGW_KEY</code> and gateway access. The 0.30 threshold, five-result cap, and full-catalogue Q&amp;A context may need revisiting if the catalogue changes substantially. Ask CampusSwap has grounding instructions but no adversarial-prompt evaluation. There is no pagination, sorting control, deployment setup, or completed live accessibility review.</p></section></main><footer>Made for student life. <span>Seeded demo · No real transactions</span><a href="/notes">Read the project notes ↗</a></footer>
+<body><header class="site-header"><a class="brand" href="/" aria-label="CampusSwap home"><span class="brand-mark" aria-hidden="true">↔</span> CampusSwap</a><nav aria-label="Main navigation"><a href="/">Browse</a><a href="/ask">Ask AI ✦</a><a class="active" href="/notes" aria-current="page">Project notes</a></nav></header>
+<main class="notes">
+  <p class="eyebrow">BUILDING CAMPUSSWAP</p>
+  <h1>My project notes</h1>
+  <p class="intro">
+    What I built, how I approached the project, how the AI works,
+    and what is intentionally left out of this demo.
+  </p>
+
+  <section>
+    <h2>What I built and who it is for</h2>
+
+    <p>
+      CampusSwap is an AI-enabled second-hand marketplace demo built for
+      students who want an easier way to find affordable items for campus life.
+      I built it as part of the CognitioLabs Associate Forward Deployed Engineer
+      assessment.
+    </p>
+
+    <p>
+      The marketplace includes a responsive catalogue, individual listing pages,
+      category filtering, semantic search, and an Ask AI feature. Users can search
+      by item name or simply describe what they need. They can also ask questions
+      about the catalogue, compare listings, and open relevant items directly from
+      the AI response.
+    </p>
+
+    <p>
+      Navigation between browse results, listing pages, and Ask AI is designed to
+      preserve useful page state where possible, so users can move around the demo
+      without constantly starting over.
+    </p>
+  </section>
+
+  <section>
+    <h2>How I approached the build</h2>
+
+    <p>
+      I started by breaking the assessment into a few core goals: build a public,
+      mobile-friendly second-hand marketplace, let users find items using natural
+      language, and provide an AI that can answer questions using the catalogue.
+      Instead of trying to build a complete marketplace immediately, I focused first
+      on the main reviewer journey: browse items, search, open a listing, and ask
+      the AI about the catalogue.
+    </p>
+
+    <p>
+      I first built the basic catalogue, category filtering, and listing pages.
+      When I moved on to search, I considered simple keyword matching, but realised
+      it would be limited when someone describes a need instead of typing an exact
+      item name. For example, a student might search for "something cheap for
+      studying". I therefore added embeddings so the search can use semantic
+      meaning. I later simplified this into one search box because users should not
+      need to understand or choose between technical search modes.
+    </p>
+
+    <p>
+      After search was working, I designed Ask AI to solve a different problem.
+      Search helps users find items, while Ask AI helps them understand and compare
+      items in the catalogue. I also considered the risk of the model inventing
+      information, so I designed the Q&amp;A flow to ground answers in the seeded
+      catalogue and to acknowledge when information such as warranty, delivery,
+      or availability is not provided. Because the demo has only 36 listings, I
+      chose to use the full compact catalogue as grounding context rather than
+      relying only on a few Top-K search results.
+    </p>
+
+    <p>
+      Finally, I went through the site again from the point of view of a normal
+      user and a reviewer. This led me to improve navigation, preserve useful
+      browse and Ask AI state, make the AI feature easier to discover, and test
+      the responsive layout on desktop and mobile. I intentionally left out larger
+      features such as login, payments, and seller messaging so I could keep the
+      project focused on the assessment's main marketplace, AI, grounding, testing,
+      and deployment requirements.
+    </p>
+  </section>
+
+  <section>
+    <h2>What is demo data</h2>
+
+    <p>
+      All 36 listings are fictional, seeded examples created for this assessment.
+      They cover categories such as study, electronics, furniture, sports,
+      lifestyle, room essentials, books, and clothing.
+    </p>
+
+    <p>
+      Item names, prices, conditions, sellers, and Singapore pickup locations are
+      example data and are not real offers from students. The item images are emoji
+      placeholders. No real purchase, reservation, payment, or seller conversation
+      takes place in this demo.
+    </p>
+  </section>
+
+  <section>
+    <h2>Tools and AI</h2>
+
+    <p>
+      I used Codex as an AI coding tool to help inspect the repository, plan parts
+      of the implementation, write and review code, and improve the project
+      documentation.
+    </p>
+
+    <p>
+      The marketplace search uses
+      <code>openai/text-embedding-3-small</code> through the CognitioLabs gateway.
+      This allows users to search using natural language instead of relying only
+      on exact keywords.
+    </p>
+
+    <p>
+      Ask AI uses the same embedding model to help order relevant catalogue records,
+      then uses <code>gpt-5.6-terra</code> through the CognitioLabs
+      OpenAI-compatible gateway to generate the final answer. The gateway key is
+      read from the server-side <code>CLASSGW_KEY</code> environment variable and
+      is not exposed to the browser.
+    </p>
+  </section>
+
+  <section>
+    <h2>How I keep the AI grounded</h2>
+
+    <p>
+      Ask AI is designed to answer using the seeded CampusSwap catalogue rather
+      than general knowledge. Because this demo only has 36 listings, I provide
+      the model with compact catalogue information for all of them after using
+      embeddings to relevance-order the records.
+    </p>
+
+    <p>
+      This was an intentional choice. Using only a small Top-K set could leave out
+      an item that matters for questions about things such as price, condition,
+      or pickup location.
+    </p>
+
+    <p>
+      The model can suggest listing IDs in its response, but I do not trust those
+      IDs directly. The backend validates them against the grounded catalogue and
+      reloads the actual listing data from SQLite before sending clickable cards
+      to the browser.
+    </p>
+
+    <p>
+      The AI is also instructed to say when the catalogue does not contain the
+      information needed to answer a question, such as warranty, delivery, or
+      availability, instead of inventing an answer.
+    </p>
+  </section>
+
+  <section>
+    <h2>What I intentionally left out</h2>
+
+    <p>
+      I kept the project focused on the assessment requirements rather than trying
+      to build a complete production marketplace. I did not add user accounts,
+      authentication, payments, seller messaging, listing management, image
+      uploads, persistent chat history, or real transactions.
+    </p>
+
+    <p>
+      I also kept the technical setup intentionally small. The frontend uses Vue 3
+      directly in the browser without Vite or an npm build step, and the application
+      uses SQLite rather than adding a separate vector database.
+    </p>
+  </section>
+
+  <section>
+    <h2>What I tested</h2>
+
+    <p>
+      The automated Python tests use a temporary SQLite database and mock external
+      embedding and chat-completion calls, so the test suite does not consume real
+      gateway requests. The tests cover catalogue seeding, filters, validation,
+      semantic search behaviour, embedding caching, Q&amp;A context construction,
+      missing-fact responses, and safe failure behaviour.
+    </p>
+
+    <p>
+      I have also tested the deployed website in a desktop browser and on a mobile
+      phone, including the main catalogue and responsive layout. A full accessibility
+      and assistive-technology review has not been completed.
+    </p>
+  </section>
+
+  <section>
+    <h2>Known issues and limitations</h2>
+
+    <p>
+      CampusSwap is a deployed assessment demo, not a production marketplace.
+      There is no identity or campus verification, moderation, stock tracking,
+      payment flow, or real seller contact. SQLite is suitable for this small demo,
+      but the current architecture is not designed for multiple application servers
+      or production-scale marketplace traffic.
+    </p>
+
+    <p>
+      Semantic search and Ask AI depend on access to the CognitioLabs gateway.
+      The current semantic search uses a 0.30 starting similarity threshold and
+      returns at most five listings. These choices were tested for the small seeded
+      catalogue and would need to be reviewed if the catalogue became much larger.
+    </p>
+
+    <p>
+      Ask AI uses grounding instructions and backend validation, but I have not
+      completed a full adversarial-prompt evaluation. The demo also does not include
+      pagination or sorting controls.
+    </p>
+  </section>
+</main>
+<footer>Made for student life. <span>Seeded demo · No real transactions</span><a href="/notes">Read the project notes ↗</a></footer>
 <a class="floating-ask" href="/ask" aria-label="Ask CampusSwap" title="Ask CampusSwap">
   <span aria-hidden="true">✦</span>
 </a>
