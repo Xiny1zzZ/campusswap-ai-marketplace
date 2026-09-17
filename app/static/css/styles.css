@@ -9,9 +9,34 @@ a, button, input, select { -webkit-tap-highlight-color: transparent; }
 .site-header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 23px 0; border-bottom: 1px solid var(--line); gap: 16px; background: var(--paper); }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 23px; font-weight: 800; letter-spacing: -1px; text-decoration: none; }
 .brand-mark { display: grid; place-items: center; background: var(--green); color: white; border-radius: 12px; width: 38px; height: 38px; }
-nav { display: flex; gap: 24px; font-size: 14px; font-weight: 600; }
-nav a { text-decoration: none; }
-nav a:hover, .back-link:hover { text-decoration: underline; }
+nav {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+nav a {
+  padding: 7px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background .15s ease, color .15s ease;
+}
+
+nav a:hover {
+  background: #edf2e9;
+  text-decoration: none;
+}
+
+nav a.active {
+  background: #e6edd3;
+  color: var(--green);
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
 .hero { display: grid; grid-template-columns: 1fr 300px; align-items: center; gap: 30px; padding: 60px 0 42px; }
 .eyebrow { color: var(--green); font-weight: 750; font-size: 12px; letter-spacing: 1.8px; }
 h1, h2, h3, p { margin-top: 0; }
@@ -101,6 +126,45 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-weight: 600;
 .example-prompts > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
 .prompt-chip { min-height: 0; border-color: #c7d4c8; padding: 8px 12px; border-radius: 999px; background: white; color: var(--green); font-size: 13px; font-weight: 650; white-space: normal; }
 .prompt-chip:hover { background: #edf2e9; }
+/* Floating Ask CampusSwap button */
+.floating-ask {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 20;
+
+  display: grid;
+  place-items: center;
+
+  width: 58px;
+  height: 58px;
+
+  border-radius: 50%;
+  background: var(--green);
+  color: white;
+
+  font-size: 25px;
+  text-decoration: none;
+
+  border: 1px solid var(--green);
+  box-shadow: 0 8px 24px #19392f2e;
+
+  transition:
+    transform .15s ease,
+    box-shadow .15s ease,
+    background .15s ease;
+}
+
+.floating-ask:hover {
+  background: #173f2d;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px #19392f38;
+}
+
+.floating-ask:focus-visible {
+  outline: 3px solid #b56620;
+  outline-offset: 4px;
+}
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @keyframes chat-pulse { 50% { opacity: .35; transform: scale(.75); } }
 @media (max-width: 950px) { .listing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hero { grid-template-columns: 1fr 230px; } .filters { flex-wrap: wrap; } .search-field { flex-basis: 55%; } .detail-layout { gap: 26px; } }
@@ -108,3 +172,12 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-weight: 600;
 @media (max-width: 600px) { .ask-page { padding-top: 30px; } .ask-intro { margin-bottom: 22px; } .chat-card { border-radius: 14px; } .chat-card-header { padding: 15px; } .chat-history { min-height: 270px; max-height: 55vh; padding: 15px; } .chat-message { max-width: 94%; } .ask-form { padding: 12px; } .example-prompts { padding: 14px 12px 3px; } .prompt-chip { width: 100%; } }
 @media (max-width: 480px) { .qa-listing-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .listing-card { transition: none; } .listing-card:hover { transform: none; } }
+@media (max-width: 600px) {
+  .floating-ask {
+    right: 18px;
+    bottom: 18px;
+    width: 54px;
+    height: 54px;
+    font-size: 23px;
+  }
+}
